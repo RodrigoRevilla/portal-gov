@@ -1,0 +1,64 @@
+<div class="portal-container">
+
+  <div class="welcome-section">
+    <div class="welcome-text">
+      <h1>Bienvenido, {{ usuario?.nombre }}</h1>
+      <p>Secretaría de Administración del Estado de Oaxaca</p>
+    </div>
+    <div class="welcome-date">
+      <strong>{{ fechaDia }}</strong>
+      <span>{{ fechaMes }}</span>
+    </div>
+  </div>
+
+  <div class="section-label">Sistemas disponibles</div>
+
+  <div class="cards-grid">
+    <div class="sys-card" *ngFor="let s of sistemasDisponibles" (click)="irA(s.ruta)">
+      <div class="card-top"></div>
+      <div class="card-body">
+        <div class="card-icon">{{ s.icono }}</div>
+        <div class="card-nombre">{{ s.nombre }}</div>
+        <div class="card-desc">{{ s.descripcion }}</div>
+        <div class="card-meta">
+          <span class="card-tag">{{ s.tag }}</span>
+          <div class="card-arrow">
+            <svg viewBox="0 0 12 12" fill="none">
+              <path d="M2 10L10 2M10 2H4M10 2V8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sys-card future">
+      <div class="future-plus">+</div>
+      <div class="future-label">Próximo sistema</div>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-dot"></div>
+      <div class="stat-info">
+        <div class="stat-val">{{ sistemasDisponibles.length }}</div>
+        <div class="stat-lbl">Sistemas activos</div>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-dot gold"></div>
+      <div class="stat-info">
+        <div class="stat-val">1</div>
+        <div class="stat-lbl">Sesión activa</div>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-dot"></div>
+      <div class="stat-info">
+        <div class="stat-val">{{ horaActual }}</div>
+        <div class="stat-lbl">Hora del sistema</div>
+      </div>
+    </div>
+  </div>
+
+</div>

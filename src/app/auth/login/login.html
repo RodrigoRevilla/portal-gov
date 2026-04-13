@@ -1,0 +1,45 @@
+<div class="login-page">
+  <div class="login-card">
+
+    <div class="login-header">
+      <div class="escudo">Ω</div>
+      <h1>Portal de Sistemas</h1>
+      <p>Secretaría de Administración<br>Estado de Oaxaca</p>
+    </div>
+
+    <div class="login-form">
+      <div class="form-group" [class.error]="!!errorMsg">
+        <label>Correo electrónico</label>
+        <input
+          type="email"
+          [(ngModel)]="email"
+          placeholder="usuario@oaxaca.gob.mx"
+          (keydown.enter)="login()"
+          [disabled]="cargando"
+        />
+      </div>
+
+      <div class="form-group" [class.error]="!!errorMsg">
+        <label>Contraseña</label>
+        <input
+          type="password"
+          [(ngModel)]="password"
+          placeholder="••••••••"
+          (keydown.enter)="login()"
+          [disabled]="cargando"
+        />
+      </div>
+
+      <div class="error-msg" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+      <button class="btn-login" (click)="login()" [disabled]="cargando">
+        <span *ngIf="!cargando">Iniciar sesión</span>
+        <span *ngIf="cargando" class="spinner"></span>
+      </button>
+    </div>
+
+    <div class="login-footer">
+      Acceso restringido al personal autorizado
+    </div>
+  </div>
+</div>
