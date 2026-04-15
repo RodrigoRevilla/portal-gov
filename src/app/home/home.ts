@@ -42,13 +42,13 @@ export class HomeComponent implements OnInit {
     },
     {
       id: 'registro-civil',
-      nombre: 'Registro Civil',
+      nombre: 'Control de Oficiales',
       descripcion: 'Gestión de oficiales y oficialías del estado. Control de actas, oficiales activos y estadísticas.',
       tag: 'Registro Civil',
       icono: '📋',
-      ruta: '/registro-civil',
+      ruta: '/control-oficiales',
       requiereSistema: 'registro-civil'
-    }
+    },
   ];
 
   get sistemasDisponibles(): SistemaCard[] {
@@ -70,9 +70,9 @@ export class HomeComponent implements OnInit {
   }
 
   private setFecha() {
-    const meses = ['enero','febrero','marzo','abril','mayo','junio',
-                   'julio','agosto','septiembre','octubre','noviembre','diciembre'];
-    const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const now = new Date();
     this.fechaDia = `${dias[now.getDay()]} ${now.getDate()}`;
     this.fechaMes = `${meses[now.getMonth()]} ${now.getFullYear()}`;

@@ -1,24 +1,28 @@
 <header class="navbar">
-  <div class="navbar-brand" routerLink="/home">
-    <div class="navbar-escudo">Ω</div>
-    <div class="navbar-title">
-      Portal de Sistemas
-      <span>Secretaría de Administración · Oaxaca</span>
+  <div class="navbar-inner">
+    <div class="navbar-brand" routerLink="/home">
+      <div class="navbar-escudo">Ω</div>
+      <div class="navbar-title">
+        Portal de Sistemas
+        <span>Secretaría de Administración · Oaxaca</span>
+      </div>
     </div>
-  </div>
 
-  <nav class="navbar-nav" *ngIf="usuario">
-    <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Inicio</a>
-    <a routerLink="/inventario" routerLinkActive="active" *ngIf="tieneSistema('inventario')">Inv·Gov</a>
-    <a routerLink="/registro-civil" routerLinkActive="active" *ngIf="tieneSistema('registro-civil')">Registro Civil</a>
-  </nav>
+    <nav class="navbar-nav" *ngIf="usuario">
+      <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Inicio</a>
+      <a routerLink="/inventario" routerLinkActive="active" *ngIf="tieneSistema('inventario')">Inv·Gov</a>
+      <a routerLink="/control-oficiales" routerLinkActive="active" *ngIf="tieneSistema('registro-civil')">
+        Control de Oficiales
+      </a>
+    </nav>
 
-  <div class="navbar-user" *ngIf="usuario">
-    <div class="user-info">
-      <strong>{{ usuario.nombre }}</strong>
-      <span>{{ rolLabel }}</span>
+    <div class="navbar-user" *ngIf="usuario">
+      <div class="user-info">
+        <strong>{{ usuario.nombre }}</strong>
+        <span>{{ rolLabel }}</span>
+      </div>
+      <div class="user-avatar">{{ inicial }}</div>
+      <button class="btn-logout" (click)="logout()">Salir</button>
     </div>
-    <div class="user-avatar">{{ inicial }}</div>
-    <button class="btn-logout" (click)="logout()">Salir</button>
   </div>
 </header>

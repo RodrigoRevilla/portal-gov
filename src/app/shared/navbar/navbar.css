@@ -1,14 +1,19 @@
 .navbar {
   background: #8B1538;
-  padding: 0 32px;
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 2px solid rgba(201, 168, 76, 0.3);
+}
+
+.navbar-inner {
+  margin: 0;
+  padding: 0 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 60px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  border-bottom: 2px solid rgba(201,168,76,0.3);
 }
 
 .navbar-brand {
@@ -46,7 +51,7 @@
   font-family: sans-serif;
   font-size: 10px;
   font-weight: 300;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
   letter-spacing: 0.06em;
 }
 
@@ -56,7 +61,7 @@
 }
 
 .navbar-nav a {
-  color: rgba(255,255,255,0.65);
+  color: rgba(255, 255, 255, 0.65);
   text-decoration: none;
   font-size: 13px;
   padding: 6px 14px;
@@ -66,7 +71,7 @@
 
 .navbar-nav a:hover,
 .navbar-nav a.active {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 
@@ -93,13 +98,13 @@
 
 .user-info span {
   font-size: 10px;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .user-avatar {
   width: 30px;
   height: 30px;
-  background: rgba(201,168,76,0.2);
+  background: rgba(201, 168, 76, 0.2);
   border: 1.5px solid #C9A84C;
   border-radius: 50%;
   display: flex;
@@ -112,8 +117,8 @@
 
 .btn-logout {
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.2);
-  color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 11px;
   padding: 4px 10px;
   border-radius: 5px;
@@ -122,6 +127,6 @@
 }
 
 .btn-logout:hover {
-  border-color: rgba(255,255,255,0.5);
+  border-color: rgba(255, 255, 255, 0.5);
   color: #fff;
 }

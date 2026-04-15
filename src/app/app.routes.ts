@@ -12,15 +12,15 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./home/home').then(m => m.HomeComponent)
   },
-  // {
-  //   path: 'inventario',
-  //   canActivate: [authGuard],
-  //   loadChildren: () => import('./inventario/inventario.routes').then(m => m.INVENTARIO_ROUTES)
-  // },
-  // {
-  //   path: 'registro-civil',
-  //   canActivate: [authGuard],
-  //   loadChildren: () => import('./registro-civil/registro-civil.routes').then(m => m.REGISTRO_CIVIL_ROUTES)
-  // },
+  {
+    path: 'inventario',
+    canActivate: [authGuard],
+    loadChildren: () => import('./inventario/inventario.routes').then(m => m.INVENTARIO_ROUTES)
+  },
+  {
+    path: 'control-oficiales',
+    canActivate: [authGuard],
+    loadChildren: () => import('./control-oficiales/control-oficiales.routes').then(m => m.CONTROL_OFICIALES_ROUTES)
+  },
   { path: '**', redirectTo: 'home' }
 ];

@@ -1,0 +1,42 @@
+<div class="modal-overlay" (click)="onOverlayClick($event)">
+  <div class="modal" style="width:460px">
+    <div class="modal-head">
+      <h2>Nueva Oficialía</h2>
+      <button class="modal-close" (click)="cerrar.emit()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Número</label>
+          <input type="text" [(ngModel)]="form.numero" placeholder="Ej. 45"/>
+        </div>
+        <div class="form-field">
+          <label>Sistema</label>
+          <select [(ngModel)]="form.sistema">
+            <option value="">-- Sin definir --</option>
+            <option value="SID">SID</option>
+            <option value="SIRCO">SIRCO</option>
+          </select>
+        </div>
+        <div class="form-field full">
+          <label>Nombre de la oficialía</label>
+          <input type="text" [(ngModel)]="form.nombre"
+                 placeholder="Ej. SAN PABLO VILLA DE MITLA"/>
+        </div>
+        <div class="form-field full">
+          <label>Región</label>
+          <select [(ngModel)]="form.region">
+            <option value="">-- Sin definir --</option>
+            @for (r of regiones; track r) {
+              <option [value]="r">{{ r }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" (click)="cerrar.emit()">Cancelar</button>
+      <button class="btn btn-primary" (click)="doGuardar()">Guardar</button>
+    </div>
+  </div>
+</div>

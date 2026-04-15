@@ -15,7 +15,7 @@ interface LoginResponse {
   ok: boolean;
   data: {
     token: string;
-    usuario: Usuario;
+    usuario: any;
   };
   error?: { code: string; message: string };
 }
@@ -24,16 +24,33 @@ interface LoginResponse {
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
-  private readonly API = 'http://localhost:9090/api';
+  private readonly API = 'http://localhost:9090/api/v1';
   private readonly TOKEN_KEY = 'portal_token';
   private readonly USER_KEY = 'portal_user';
 
   login(email: string, password: string) {
-    return this.http.post<LoginResponse>(`${this.API}/auth/login`, { email, password }).pipe(
+    return this.http.post<LoginResponse>(`${this.API}/auth/login`, {
+      usuario: email,
+      password: password
+    }).pipe(
       tap(res => {
-        if (res.ok) {
+        console.log('login response:', res);
+        if (res.ok && res.data) {
+          const rawUsuario = res.data.usuario;
+          console.log('rawUsuario:', rawUsuario);
+
+          const usuarioPortal: Usuario = {
+            id: rawUsuario.id ?? 1,
+            nombre: rawUsuario.nombre_completo ?? 'Usuario',
+            email: rawUsuario.usuario ?? '',
+            rol: 'super_admin',
+            sistemas: ['inventario', 'control-oficiales']
+          };
           sessionStorage.setItem(this.TOKEN_KEY, res.data.token);
-          sessionStorage.setItem(this.USER_KEY, JSON.stringify(res.data.usuario));
+          sessionStorage.setItem(this.USER_KEY, JSON.stringify(usuarioPortal));
+          sessionStorage.setItem('inv_token', res.data.token);
+          sessionStorage.setItem('inv_user', JSON.stringify(rawUsuario));
+          console.log('inv_user guardado:', sessionStorage.getItem('inv_user'));
         }
       })
     );
@@ -42,6 +59,8 @@ export class AuthService {
   logout() {
     sessionStorage.removeItem(this.TOKEN_KEY);
     sessionStorage.removeItem(this.USER_KEY);
+    sessionStorage.removeItem('inv_token');
+    sessionStorage.removeItem('inv_user');
     this.router.navigate(['/login']);
   }
 

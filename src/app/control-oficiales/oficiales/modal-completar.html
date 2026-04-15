@@ -1,0 +1,101 @@
+<div class="modal-overlay" (click)="onOverlayClick($event)">
+  <div class="modal" style="width:500px">
+
+    <div class="modal-head">
+      <div>
+        <h2>Completar registro</h2>
+        <div style="font-size:13px;color:var(--text-mid);margin-top:3px">
+          {{ oficial?.nombres }} {{ oficial?.ap1 }} {{ oficial?.ap2 }}
+        </div>
+      </div>
+      <button class="modal-close" (click)="cerrar.emit()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="pendiente-banner">
+        <span class="pendiente-icon">⏳</span>
+        Este oficial está pendiente de completar su registro.
+        Al guardar pasará a estado <strong>Activo</strong>.
+      </div>
+
+      <div class="form-grid" style="margin-top:20px">
+
+        <div class="form-field full">
+          <label>Username</label>
+          <input type="text" [(ngModel)]="form['username']"
+                 placeholder="AAAA000000HOCRRR01"
+                 maxlength="18" style="text-transform:uppercase"/>
+        </div>
+
+        <div class="form-field">
+          <label>Sistema</label>
+          <select [(ngModel)]="form['sistema']">
+            <option value="">-- Sin definir --</option>
+            <option value="SID">SID</option>
+            <option value="SIRCO">SIRCO</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label>Teléfono</label>
+          <input type="tel" [(ngModel)]="form['tel']"
+                 placeholder="951 123 4567" maxlength="15"/>
+        </div>
+
+        <div class="form-field full">
+          <label>Oficialía</label>
+          <select [(ngModel)]="form['ofic']" (ngModelChange)="onOficialiaChange($event)">
+            @for (o of oficialias; track o.id) {
+              <option [value]="o.nombre">{{ o.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-field full">
+          <label>Región</label>
+          <input type="text" [value]="form['region'] || ''" readonly
+                 style="background:#f5f5f5;color:var(--text-mid)"/>
+        </div>
+
+        <div class="form-field full">
+          <label>Correo electrónico</label>
+          <input type="email" [(ngModel)]="form['email']"
+                 placeholder="oficial@registrocivil.oax.gob.mx"/>
+        </div>
+
+        <div class="form-field full">
+          <label>Servicios y accesos</label>
+          <div class="checks">
+            <label class="check-item">
+              <input type="checkbox" [(ngModel)]="form['sid']"/>
+              <span><strong>SID</strong> — Sistema de Identidad Digital</span>
+            </label>
+            <label class="check-item">
+              <input type="checkbox" [(ngModel)]="form['internet']"/>
+              <span><strong>Internet</strong> — Conexión convencional</span>
+            </label>
+            <label class="check-item">
+              <input type="checkbox" [(ngModel)]="form['starlink']"/>
+              <span><strong>Starlink</strong> — Conexión satelital</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-field full">
+          <label>Observaciones</label>
+          <input type="text" [(ngModel)]="form['obs']"
+                 placeholder="Notas adicionales (opcional)"/>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-secondary" (click)="cerrar.emit()">Cancelar</button>
+      <button class="btn btn-completar" [disabled]="guardando" (click)="doCompletar()">
+        {{ guardando ? 'Guardando…' : '✓ Completar y activar' }}
+      </button>
+    </div>
+
+  </div>
+</div>

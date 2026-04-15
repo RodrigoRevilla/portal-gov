@@ -1,0 +1,13 @@
+<div class="modal-overlay" (click)="onOverlayClick($event)">
+  <div class="modal" style="width:380px">
+    <div class="confirm-body">
+      <div class="confirm-icon">🗑️</div>
+      <h3>¿Eliminar oficial?</h3>
+      <p>Se eliminará a <strong>{{ nombre }}</strong>.<br>Esta acción no se puede deshacer.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" (click)="cancelar.emit()">Cancelar</button>
+      <button class="btn btn-danger" (click)="confirmar.emit()">Eliminar</button>
+    </div>
+  </div>
+</div>

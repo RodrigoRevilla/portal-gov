@@ -1,0 +1,337 @@
+--  SISTEMA DE ESCANEO DE INVENTARIO GUBERNAMENTAL
+--  Schema PostgreSQL — v2.0
+--  Principios: inmutabilidad, trazabilidad, no repudio
+
+-- Extensiones necesarias
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "btree_gist";
+
+--  TIPOS ENUMERADOS
+
+CREATE TYPE rol_usuario AS ENUM (
+  'escaner',
+  'supervisor',
+  'auditor',
+  'admin'
+);
+
+CREATE TYPE estado_bien AS ENUM (
+  'activo',
+  'baja',
+  'extraviado',
+  'en_proceso_baja'
+);
+
+CREATE TYPE estado_sesion AS ENUM (
+  'abierta',
+  'pausada',
+  'cerrada'
+);
+
+CREATE TYPE resultado_escaneo AS ENUM (
+  'coincide',
+  'encontrado',
+  'no_en_catalogo'
+);
+
+--  TABLA: dependencias
+
+CREATE TABLE dependencias (
+  id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  clave_dependencia VARCHAR(20) NOT NULL UNIQUE,
+  nombre            TEXT        NOT NULL,
+  responsable       TEXT        NOT NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+--  TABLA: usuarios
+
+CREATE TABLE usuarios (
+  id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  dependencia_id   UUID        NOT NULL REFERENCES dependencias(id),
+  nombre_completo  TEXT        NOT NULL,
+  usuario          VARCHAR(60) NOT NULL,
+  password_hash    TEXT        NOT NULL,
+  rol              rol_usuario NOT NULL,
+  activo           BOOLEAN     NOT NULL DEFAULT TRUE,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  CONSTRAINT uq_usuario_por_dependencia UNIQUE (dependencia_id, usuario)
+);
+
+CREATE INDEX idx_usuarios_dependencia ON usuarios(dependencia_id);
+CREATE INDEX idx_usuarios_activo      ON usuarios(activo) WHERE activo = TRUE;
+
+--  TABLA: versiones_catalogo
+
+CREATE TABLE versiones_catalogo (
+  id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  dependencia_id UUID        NOT NULL REFERENCES dependencias(id),
+  numero_version INTEGER     NOT NULL,
+  activa         BOOLEAN     NOT NULL DEFAULT TRUE,
+  importado_por  UUID        NOT NULL REFERENCES usuarios(id),
+  total_bienes   INTEGER     NOT NULL DEFAULT 0,
+  hash_archivo   TEXT        NOT NULL,
+  nombre_archivo TEXT        NOT NULL,
+  importado_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  CONSTRAINT uq_version_por_dependencia UNIQUE (dependencia_id, numero_version)
+);
+
+CREATE UNIQUE INDEX idx_una_version_activa
+  ON versiones_catalogo(dependencia_id)
+  WHERE activa = TRUE;
+
+--  TABLA: catalogo_bienes
+
+CREATE TABLE catalogo_bienes (
+  id                 UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  version_id         UUID        NOT NULL REFERENCES versiones_catalogo(id),
+  dependencia_id     UUID        NOT NULL REFERENCES dependencias(id),
+  numero_inventario  VARCHAR(80) NOT NULL,
+  numero_serie       VARCHAR(100),
+  descripcion        TEXT        NOT NULL,
+  marca              VARCHAR(80),
+  modelo             VARCHAR(80),
+  ubicacion_esperada TEXT,
+  resguardo          VARCHAR(100),
+  clasificacion      VARCHAR(60),
+  estado             estado_bien NOT NULL DEFAULT 'activo',
+  metadatos          JSONB,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  CONSTRAINT uq_numero_inv_por_version
+    UNIQUE (version_id, numero_inventario)
+);
+
+CREATE INDEX idx_bienes_version       ON catalogo_bienes(version_id);
+CREATE INDEX idx_bienes_dependencia   ON catalogo_bienes(dependencia_id);
+CREATE INDEX idx_bienes_numero_inv    ON catalogo_bienes(numero_inventario);
+CREATE INDEX idx_bienes_estado        ON catalogo_bienes(estado);
+CREATE INDEX idx_bienes_resguardo     ON catalogo_bienes(resguardo);
+
+CREATE RULE no_update_catalogo AS
+  ON UPDATE TO catalogo_bienes DO INSTEAD NOTHING;
+
+CREATE RULE no_delete_catalogo AS
+  ON DELETE TO catalogo_bienes DO INSTEAD NOTHING;
+
+--  TABLA: sesiones_escaneo
+
+CREATE TABLE sesiones_escaneo (
+  id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  dependencia_id  UUID          NOT NULL REFERENCES dependencias(id),
+  version_id      UUID          NOT NULL REFERENCES versiones_catalogo(id),
+  iniciado_por    UUID          NOT NULL REFERENCES usuarios(id),
+  cerrado_por     UUID          REFERENCES usuarios(id),
+  nombre_sesion   TEXT          NOT NULL,
+  descripcion     TEXT,
+  area_cubierta   TEXT,
+  estado          estado_sesion NOT NULL DEFAULT 'abierta',
+  hash_cierre     TEXT,
+  iniciada_at     TIMESTAMPTZ   NOT NULL DEFAULT now(),
+  cerrada_at      TIMESTAMPTZ,
+
+  CONSTRAINT ck_cerrada_tiene_hash
+    CHECK (estado != 'cerrada' OR hash_cierre IS NOT NULL),
+  CONSTRAINT ck_cerrada_tiene_usuario
+    CHECK (estado != 'cerrada' OR cerrado_por IS NOT NULL),
+  CONSTRAINT ck_cerrada_tiene_fecha
+    CHECK (estado != 'cerrada' OR cerrada_at IS NOT NULL)
+);
+
+CREATE OR REPLACE FUNCTION fn_proteger_sesion_cerrada()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.estado = 'cerrada' THEN
+    RAISE EXCEPTION 'Una sesión cerrada no puede modificarse (id: %)', OLD.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_proteger_sesion_cerrada
+  BEFORE UPDATE ON sesiones_escaneo
+  FOR EACH ROW EXECUTE FUNCTION fn_proteger_sesion_cerrada();
+
+CREATE INDEX idx_sesiones_dependencia ON sesiones_escaneo(dependencia_id);
+CREATE INDEX idx_sesiones_estado      ON sesiones_escaneo(estado);
+CREATE INDEX idx_sesiones_iniciada    ON sesiones_escaneo(iniciada_at DESC);
+
+--  TABLA: escaneos
+
+CREATE TABLE escaneos (
+  id                  UUID              PRIMARY KEY DEFAULT gen_random_uuid(),
+  sesion_id           UUID              NOT NULL REFERENCES sesiones_escaneo(id),
+  bien_id             UUID              REFERENCES catalogo_bienes(id),
+  escaneado_por       UUID              NOT NULL REFERENCES usuarios(id),
+  resultado           resultado_escaneo NOT NULL,
+  numero_inv_leido    VARCHAR(80)       NOT NULL,
+  ubicacion_escaneada TEXT,
+  observaciones       TEXT,
+  escaneado_at        TIMESTAMPTZ       NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION fn_validar_sesion_abierta()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+  v_estado estado_sesion;
+BEGIN
+  SELECT estado INTO v_estado
+  FROM sesiones_escaneo
+  WHERE id = NEW.sesion_id;
+
+  IF v_estado != 'abierta' THEN
+    RAISE EXCEPTION 'No se puede escanear en una sesión % (id: %)', v_estado, NEW.sesion_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_validar_sesion_abierta
+  BEFORE INSERT ON escaneos
+  FOR EACH ROW EXECUTE FUNCTION fn_validar_sesion_abierta();
+
+CREATE RULE no_update_escaneos AS
+  ON UPDATE TO escaneos DO INSTEAD NOTHING;
+
+CREATE RULE no_delete_escaneos AS
+  ON DELETE TO escaneos DO INSTEAD NOTHING;
+
+CREATE INDEX idx_escaneos_sesion     ON escaneos(sesion_id);
+CREATE INDEX idx_escaneos_bien       ON escaneos(bien_id);
+CREATE INDEX idx_escaneos_resultado  ON escaneos(resultado);
+CREATE INDEX idx_escaneos_at         ON escaneos(escaneado_at DESC);
+CREATE INDEX idx_escaneos_numero_inv ON escaneos(numero_inv_leido);
+
+--  TABLA: audit_log
+
+CREATE TABLE audit_log (
+  id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  usuario_id       UUID        REFERENCES usuarios(id),
+  sesion_id        UUID        REFERENCES sesiones_escaneo(id),
+  tabla_afectada   TEXT        NOT NULL,
+  operacion        TEXT        NOT NULL,
+  datos_anteriores JSONB,
+  datos_nuevos     JSONB,
+  ip_origen        INET,
+  user_agent       TEXT,
+  registrado_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE RULE no_update_audit AS
+  ON UPDATE TO audit_log DO INSTEAD NOTHING;
+
+CREATE RULE no_delete_audit AS
+  ON DELETE TO audit_log DO INSTEAD NOTHING;
+
+CREATE INDEX idx_audit_usuario    ON audit_log(usuario_id);
+CREATE INDEX idx_audit_sesion     ON audit_log(sesion_id);
+CREATE INDEX idx_audit_operacion  ON audit_log(operacion);
+CREATE INDEX idx_audit_registrado ON audit_log(registrado_at DESC);
+
+--  VISTAS
+
+CREATE VIEW v_resumen_sesion AS
+SELECT
+  s.id                                        AS sesion_id,
+  s.dependencia_id,
+  s.nombre_sesion,
+  s.estado,
+  s.iniciada_at,
+  s.cerrada_at,
+  u_ini.nombre_completo                       AS iniciado_por,
+  u_cie.nombre_completo                       AS cerrado_por,
+  v.numero_version                            AS version_catalogo,
+  COUNT(DISTINCT cb.id)                       AS total_en_catalogo,
+  COUNT(DISTINCT e.bien_id)
+    FILTER (WHERE e.resultado IN ('coincide','encontrado'))
+                                              AS total_escaneados,
+  COUNT(DISTINCT e.id)
+    FILTER (WHERE e.resultado = 'coincide')   AS coincidencias,
+  COUNT(DISTINCT e.id)
+    FILTER (WHERE e.resultado = 'encontrado') AS ubicacion_diferente,
+  COUNT(DISTINCT e.id)
+    FILTER (WHERE e.resultado = 'no_en_catalogo')
+                                              AS no_en_catalogo,
+  COUNT(DISTINCT cb.id) -
+    COUNT(DISTINCT e.bien_id)
+    FILTER (WHERE e.resultado IN ('coincide','encontrado'))
+                                              AS faltantes
+FROM sesiones_escaneo s
+JOIN versiones_catalogo v    ON v.id = s.version_id
+JOIN catalogo_bienes cb      ON cb.version_id = v.id AND cb.estado = 'activo'
+JOIN usuarios u_ini          ON u_ini.id = s.iniciado_por
+LEFT JOIN usuarios u_cie     ON u_cie.id = s.cerrado_por
+LEFT JOIN escaneos e         ON e.sesion_id = s.id
+GROUP BY s.id, s.dependencia_id, s.nombre_sesion, s.estado,
+         s.iniciada_at, s.cerrada_at,
+         u_ini.nombre_completo, u_cie.nombre_completo, v.numero_version;
+
+CREATE VIEW v_faltantes_por_sesion AS
+SELECT
+  s.id               AS sesion_id,
+  s.nombre_sesion,
+  cb.numero_inventario,
+  cb.numero_serie,
+  cb.descripcion,
+  cb.marca,
+  cb.modelo,
+  cb.ubicacion_esperada,
+  cb.resguardo,
+  cb.clasificacion
+FROM sesiones_escaneo s
+JOIN versiones_catalogo v ON v.id = s.version_id
+JOIN catalogo_bienes cb   ON cb.version_id = v.id AND cb.estado = 'activo'
+WHERE NOT EXISTS (
+  SELECT 1 FROM escaneos e
+  WHERE e.sesion_id = s.id
+    AND e.bien_id = cb.id
+    AND e.resultado IN ('coincide', 'encontrado')
+);
+
+-- ── CONTROL DE OFICIALES ────────────────────────────────────────
+
+CREATE TABLE co_usuarios (
+  id       SERIAL PRIMARY KEY,
+  usuario  VARCHAR(60) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL
+);
+
+INSERT INTO co_usuarios (usuario, password) VALUES ('admin', 'admin123');
+
+CREATE TABLE co_oficialias (
+  id        SERIAL PRIMARY KEY,
+  numero    VARCHAR(20) DEFAULT '',
+  nombre    TEXT NOT NULL,
+  region    VARCHAR(60) DEFAULT '',
+  sistema   VARCHAR(20) DEFAULT '',
+  listo_sid BOOLEAN DEFAULT false
+);
+
+CREATE TABLE co_oficiales (
+  id         SERIAL PRIMARY KEY,
+  nombres    TEXT NOT NULL,
+  ap1        TEXT NOT NULL,
+  ap2        TEXT DEFAULT '',
+  username   TEXT DEFAULT '',
+  tel        TEXT DEFAULT '',
+  email      TEXT DEFAULT '',
+  perfil     TEXT DEFAULT '',
+  municipio  TEXT DEFAULT '',
+  oficialia  INTEGER DEFAULT 0,
+  region     TEXT DEFAULT '',
+  sistema    TEXT DEFAULT '',
+  sid        BOOLEAN DEFAULT false,
+  internet   BOOLEAN DEFAULT false,
+  starlink   BOOLEAN DEFAULT false,
+  activo     BOOLEAN DEFAULT true,
+  pendiente  BOOLEAN DEFAULT false,
+  obs        TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_co_oficiales_oficialia ON co_oficiales(oficialia);
+CREATE INDEX idx_co_oficiales_sid       ON co_oficiales(sid);
+CREATE INDEX idx_co_oficiales_activo    ON co_oficiales(activo);
+CREATE INDEX idx_co_oficiales_pendiente ON co_oficiales(pendiente);

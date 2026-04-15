@@ -1,0 +1,229 @@
+<main class="app-main">
+  <div class="stats-row">
+    <div class="stat-card" [class.active]="filtroActivo==='todos'" (click)="applyFilter('todos')">
+      <div class="stat-num">{{ stats?.total ?? '—' }}</div>
+      <div class="stat-label">Total de Oficiales</div>
+      <div class="stat-hint">Activos en todas las oficialías</div>
+    </div>
+    <div class="stat-card sid-card" [class.active]="filtroActivo==='sid'" (click)="applyFilter('sid')">
+      <div class="stat-num">{{ stats?.sid ?? '—' }}</div>
+      <div class="stat-label">Con SID</div>
+      <div class="stat-hint">Sistema de Identidad Digital</div>
+    </div>
+    <div class="stat-card inet-card" [class.active]="filtroActivo==='internet'" (click)="applyFilter('internet')">
+      <div class="stat-num">{{ stats?.internet ?? '—' }}</div>
+      <div class="stat-label">Con Internet</div>
+      <div class="stat-hint">Conexión convencional</div>
+    </div>
+    <div class="stat-card star-card" [class.active]="filtroActivo==='starlink'" (click)="applyFilter('starlink')">
+      <div class="stat-num">{{ stats?.starlink ?? '—' }}</div>
+      <div class="stat-label">Con Starlink</div>
+      <div class="stat-hint">Conexión satelital</div>
+    </div>
+    <div class="stat-card gold-card">
+      <div class="stat-num">{{ stats?.oficialias ?? '—' }}</div>
+      <div class="stat-label">Oficialías</div>
+      <div class="stat-hint">Registradas en el sistema</div>
+    </div>
+    <div class="stat-card pend-card" [class.active]="filtroActivo==='pendientes'" (click)="applyFilter('pendientes')">
+      <div class="stat-num">{{ stats?.pendientes ?? '—' }}</div>
+      <div class="stat-label">Pendientes</div>
+      <div class="stat-hint">Sin registro completo</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+      <input type="text" [(ngModel)]="searchText" (ngModelChange)="onSearch($event)"
+        placeholder="Buscar por nombre o CURP…" />
+    </div>
+
+    <select class="select-filter" [(ngModel)]="oficFiltro" (ngModelChange)="loadOficiales()">
+      <option value="">Todas las oficialías</option>
+      @for (o of oficialias; track o.id) {
+      <option [value]="o.id">{{ o.nombre }}</option>
+      }
+    </select>
+
+    <select class="select-filter" style="min-width:130px" [(ngModel)]="regionFiltro" (ngModelChange)="loadOficiales()">
+      <option value="">Todas las regiones</option>
+      @for (r of regiones; track r) {
+      <option [value]="r">{{ r }}</option>
+      }
+    </select>
+
+    <select class="select-filter" style="min-width:110px" [(ngModel)]="sistemaFiltro" (ngModelChange)="loadOficiales()">
+      <option value="">SID y SIRCO</option>
+      @for (s of sistemas; track s) {
+      <option [value]="s">{{ s }}</option>
+      }
+    </select>
+
+    <div class="toolbar-sep"></div>
+
+    <button class="btn btn-excel" (click)="exportExcel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+      </svg>
+      Exportar Excel
+    </button>
+
+    <button class="btn btn-add-ofic" (click)="modalOficialiaAbierto = true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+      Nueva Oficialía
+    </button>
+
+    <button class="btn btn-primary" (click)="abrirModal(null)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+      Nuevo Oficial
+    </button>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <div>
+        <span class="table-title">{{ tituloTabla }}</span>
+        <span class="table-count">— {{ oficiales.length }} registro{{ oficiales.length !== 1 ? 's' : '' }}</span>
+      </div>
+      @if (filtroActivo !== 'todos' || hayFiltrosExtra) {
+      <button class="btn btn-secondary btn-sm" (click)="limpiarFiltros()">✕ Limpiar filtros</button>
+      }
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>#</th>
+            <th>Nombre completo</th>
+            <th>Oficialía</th>
+            <th>Sistema</th>
+            <th>Perfil</th>
+            <th>Municipio</th>
+            <th>Username</th>
+            <th class="center">SID</th>
+            <th class="center">Internet</th>
+            <th class="center">Starlink</th>
+            <th>Teléfono</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (cargando) {
+          <tr>
+            <td colspan="14" class="td-center">
+              <span class="spinner"></span>
+              <span class="loading-txt">Cargando oficiales…</span>
+            </td>
+          </tr>
+          }
+
+          @if (!cargando && !oficiales.length) {
+          <tr>
+            <td colspan="14" class="td-empty">
+              No se encontraron oficiales con los filtros aplicados.
+            </td>
+          </tr>
+          }
+
+          @for (o of oficiales; track o.id; let i = $index) {
+          <tr>
+            <td style="text-align:center;padding:0 8px">
+              @if (o.pendiente) {
+              <span class="chip chip-pendiente" style="font-size:10px;padding:2px 7px;cursor:pointer"
+                (click)="abrirCompletar(o)" title="Clic para completar registro">⏳</span>
+              } @else {
+              <span class="estado-dot" [class]="o.activo ? 'dot-activo' : 'dot-inactivo'"
+                [title]="o.activo ? 'Activo' : 'Inactivo'"></span>
+              }
+            </td>
+            <td class="td-num">{{ i + 1 }}</td>
+            <td>
+              <div class="td-name">{{ o.nombres }} {{ o.ap1 }} {{ o.ap2 }}</div>
+              <div class="td-sub">{{ o.email }}</div>
+            </td>
+            <td class="td-sm">{{ o.ofic }}</td>
+            <td>
+              <span class="chip" [class]="o.sistema === 'SID' ? 'chip-sid' : 'chip-sirco'">
+                {{ o.sistema || '—' }}
+              </span>
+            </td>
+            <td class="td-sm">{{ o.perfil }}</td>
+            <td class="td-sm">{{ o.municipio }}</td>
+            <td class="td-curp">{{ o.username || '—' }}</td>
+            <td class="center">
+              <span [class]="o.sid ? 'chip chip-sid' : 'chip chip-no'">
+                @if (o.sid) { <span class="dot dot-sid"></span> }
+                {{ o.sid ? 'SÍ' : '—' }}
+              </span>
+            </td>
+            <td class="center">
+              <span [class]="o.internet ? 'chip chip-internet' : 'chip chip-no'">
+                @if (o.internet) { <span class="dot dot-internet"></span> }
+                {{ o.internet ? 'SÍ' : '—' }}
+              </span>
+            </td>
+            <td class="center">
+              <span [class]="o.starlink ? 'chip chip-starlink' : 'chip chip-no'">
+                @if (o.starlink) { <span class="dot dot-starlink"></span> }
+                {{ o.starlink ? 'SÍ' : '—' }}
+              </span>
+            </td>
+            <td class="td-sm">{{ o.tel || '—' }}</td>
+            <td>
+              <div class="actions-cell">
+                @if (o.pendiente) {
+                <button class="btn btn-sm btn-completar" (click)="abrirCompletar(o)">✓ Completar</button>
+                } @else {
+                <button class="btn btn-secondary btn-sm" (click)="abrirModal(o)">✏️ Editar</button>
+                }
+                <button class="btn btn-sm btn-del" (click)="pedirConfirmacion(o)">🗑️</button>
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+@if (modalOficialAbierto) {
+<app-modal-oficial [oficial]="oficialEditando" [oficialias]="oficialias" [guardando]="guardando"
+  (cerrar)="cerrarModal()" (guardarOficial)="guardarOficial($event)" />
+}
+
+@if (confirmAbierto) {
+<app-confirm-dialog [nombre]="nombreEliminando" (confirmar)="eliminarOficial()" (cancelar)="confirmAbierto = false" />
+}
+
+@if (modalOficialiaAbierto) {
+<app-modal-add-ofic (cerrar)="modalOficialiaAbierto = false" (guardar)="guardarOficialia($event)" />
+}
+
+@if (modalPasswordAbierto) {
+<app-modal-password (cerrar)="modalPasswordAbierto = false" />
+}
+
+@if (modalCompletarAbierto) {
+<app-modal-completar [oficial]="oficialCompletando" [oficialias]="oficialias" [guardando]="guardando"
+  (cerrar)="modalCompletarAbierto = false; guardando = false" (completar)="completarOficial($event)" />
+}
+
+<div class="toast-container">
+  @for (t of toasts; track t.id) {
+  <div class="toast" [class]="'toast-' + t.tipo">{{ t.msg }}</div>
+  }
+</div>
