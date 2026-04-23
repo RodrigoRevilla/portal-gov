@@ -130,3 +130,18 @@
   border-color: rgba(255, 255, 255, 0.5);
   color: #fff;
 }
+
+.btn-cambiar-pass {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.6);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-cambiar-pass:hover {
+  border-color: rgba(255,255,255,0.5);
+  color: #fff;
+}

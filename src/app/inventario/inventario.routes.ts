@@ -22,5 +22,9 @@ export const INVENTARIO_ROUTES: Routes = [
     path: 'usuarios',
     loadComponent: () => import('./pages/usuarios/usuarios').then(m => m.UsuariosComponent),
   },
+  {
+    path: 'supervisor/:id',
+    loadComponent: () => import('./pages/supervisor/supervisor').then(m => m.SupervisorComponent)
+  },
   { path: '**', redirectTo: 'dashboard' }
 ];

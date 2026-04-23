@@ -245,3 +245,50 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, models.OK(map[string]string{"mensaje": "Contraseña actualizada correctamente"}))
 }
+
+func CambiarPasswordPropio(w http.ResponseWriter, r *http.Request) {
+	claims := mw.GetClaims(r)
+
+	var req struct {
+		Actual string `json:"actual"`
+		Nueva  string `json:"nueva"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, models.Err("BODY_INVALIDO", "JSON inválido"))
+		return
+	}
+	if len(req.Nueva) < 6 {
+		writeJSON(w, http.StatusBadRequest, models.Err("PASSWORD_INVALIDO", "La contraseña debe tener al menos 6 caracteres"))
+		return
+	}
+
+	var passwordHash string
+	err := db.Pool.QueryRow(r.Context(), `
+		SELECT password_hash FROM usuarios WHERE id = $1
+	`, claims.UsuarioID).Scan(&passwordHash)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, models.Err("DB_ERROR", "Error interno"))
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Actual)); err != nil {
+		writeJSON(w, http.StatusUnauthorized, models.Err("PASSWORD_INCORRECTO", "La contraseña actual es incorrecta"))
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Nueva), 12)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, models.Err("HASH_ERROR", "Error al procesar contraseña"))
+		return
+	}
+
+	_, err = db.Pool.Exec(r.Context(), `
+		UPDATE usuarios SET password_hash = $1 WHERE id = $2
+	`, string(hash), claims.UsuarioID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, models.Err("DB_ERROR", "Error al actualizar contraseña"))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, models.OK(map[string]string{"mensaje": "Contraseña actualizada"}))
+}

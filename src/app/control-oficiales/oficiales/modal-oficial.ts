@@ -27,7 +27,13 @@ export class ModalOficial implements OnChanges {
   ngOnChanges(): void {
     if (this.oficial) {
       this.editando = true;
-      this.form = { ...this.oficial };
+      this.form = {
+        ...this.oficial,
+        sid: !!this.oficial.sid,
+        internet: !!this.oficial.internet,
+        starlink: !!this.oficial.starlink,
+        activo: !!this.oficial.activo,
+      };
     } else {
       this.editando = false;
       this.form = this.formVacio();

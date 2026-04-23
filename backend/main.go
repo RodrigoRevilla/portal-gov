@@ -28,20 +28,20 @@ func main() {
 
 	r.Use(chimw.Recoverer)
 	r.Use(mw.Logger)
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
-			if r.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	})
-
+r.Use(func(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
+        w.Header().Set("Access-Control-Max-Age", "86400")
+        if r.Method == http.MethodOptions {
+            w.WriteHeader(http.StatusNoContent)
+            return
+        }
+        w.Header().Set("Content-Type", "application/json")
+        next.ServeHTTP(w, r)
+    })
+})
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"ok":true,"service":"portal-gov-api"}`))
@@ -51,6 +51,7 @@ func main() {
 
 	r.Group(func(r chi.Router) {
 		r.Use(mw.Auth)
+		r.Patch("/api/v1/auth/password", invHandlers.CambiarPasswordPropio)
 		r.With(mw.RequiereRol("admin")).Post("/api/v1/usuarios", invHandlers.CrearUsuario)
 		r.With(mw.RequiereRol("admin")).Get("/api/v1/usuarios", invHandlers.ListarUsuarios)
 		r.With(mw.RequiereRol("admin")).Post("/api/v1/catalogo/importar", invHandlers.ImportarCatalogo)

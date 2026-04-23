@@ -6,7 +6,7 @@ import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { PdfService } from '../../services/pdf.service';
 import { BuscadorCatalogoComponent } from '../../components/buscador-catalogo';
-import { EscaneoResponse, ResumenSesion, ResultadoEscaneo } from '../../models';
+import { EscaneoResponse, ResumenSesion, ResultadoEscaneo, Faltante } from '../../models';
 
 @Component({
   selector: 'app-escaneo',
@@ -19,7 +19,7 @@ import { EscaneoResponse, ResumenSesion, ResultadoEscaneo } from '../../models';
       <header class="bg-guinda-700 border-b-4 border-dorado sticky top-0 z-50 shadow-md">
         <div class="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <button (click)="router.navigate(['/dashboard'])"
+            <button (click)="router.navigate(['/inventario/dashboard'])"
                     class="text-dorado-light hover:text-white transition-colors">
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -86,6 +86,21 @@ import { EscaneoResponse, ResumenSesion, ResultadoEscaneo } from '../../models';
                   Reanudar
                 </button>
               }
+
+              <button (click)="abrirSupervisor()"
+                      class="text-white/70 hover:text-white text-xs border border-white/20
+                             hover:border-dorado hover:text-dorado px-3 py-1.5 rounded-lg
+                             transition-all duration-150 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638
+                       0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5
+                       12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Supervisar
+              </button>
 
               <button (click)="mostrarConfirmCierre.set(true)"
                       class="text-white/70 hover:text-white text-xs border border-white/20
@@ -212,7 +227,7 @@ import { EscaneoResponse, ResumenSesion, ResultadoEscaneo } from '../../models';
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987
                        8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0
-                       016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018
+                       016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118
                        18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
                 </svg>
                 Usa el ícono del libro para buscar por nombre o ubicación si el código es ilegible
@@ -292,7 +307,6 @@ import { EscaneoResponse, ResumenSesion, ResultadoEscaneo } from '../../models';
                     @if (ultimoResultado()!.descripcion) {
                       <p class="text-sm text-guinda-700 font-medium">{{ ultimoResultado()!.descripcion }}</p>
                     }
-                    <!-- Marca, Modelo y No. Serie -->
                     @if (ultimoResultado()!.marca || ultimoResultado()!.modelo || ultimoResultado()!.numero_serie) {
                       <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                         @if (ultimoResultado()!.marca) {
@@ -331,44 +345,124 @@ import { EscaneoResponse, ResumenSesion, ResultadoEscaneo } from '../../models';
           </div>
         </div>
 
+        <!-- Panel derecho con tabs -->
         <div class="lg:col-span-2">
           <div class="card h-full flex flex-col">
-            <div class="flex items-center justify-between mb-4 pb-3 border-b border-crema-border">
-              <h3 class="font-semibold text-guinda-700 text-sm">Últimos escaneos</h3>
-              <span class="text-xs font-mono bg-guinda-50 text-guinda-500 border border-guinda-100
-                           px-2 py-0.5 rounded-full">
-                {{ historial().length }}
-              </span>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-crema-border mb-3 shrink-0">
+              <button (click)="tabActivo.set('escaneos')"
+                      class="flex-1 py-2.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                      [class]="tabActivo() === 'escaneos'
+                        ? 'text-guinda-700 border-b-2 border-guinda-700 -mb-px'
+                        : 'text-guinda-400 hover:text-guinda-600'">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5z"/>
+                </svg>
+                Escaneos
+                <span class="bg-guinda-100 text-guinda-600 text-xs px-1.5 py-0.5 rounded-full font-mono">
+                  {{ historial().length }}
+                </span>
+              </button>
+              <button (click)="tabActivo.set('faltantes')"
+                      class="flex-1 py-2.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                      [class]="tabActivo() === 'faltantes'
+                        ? 'text-danger-DEFAULT border-b-2 border-danger-DEFAULT -mb-px'
+                        : 'text-guinda-400 hover:text-guinda-600'">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+                </svg>
+                Faltantes
+                <span class="text-xs px-1.5 py-0.5 rounded-full font-mono"
+                      [class]="faltantes().length > 0
+                        ? 'bg-danger-bg text-danger-DEFAULT border border-danger-border'
+                        : 'bg-guinda-100 text-guinda-600'">
+                  {{ sesion()?.faltantes ?? faltantes().length }}
+                </span>
+              </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto space-y-2 max-h-[calc(100vh-280px)]">
-              @if (historial().length === 0) {
-                <div class="text-center py-10 text-guinda-300 text-sm">Sin escaneos aún</div>
-              }
-              @for (e of historial(); track e.id) {
-                <div class="flex items-center gap-3 p-3 rounded-lg bg-crema border border-crema-border
-                            animate-fade-in hover:border-guinda-200 transition-colors">
-                  <div class="w-2 h-2 rounded-full shrink-0" [class]="dotResultado(e.resultado)"></div>
-                  <div class="flex-1 min-w-0">
-                    <div class="font-mono text-xs text-guinda-700 truncate font-semibold">{{ e.numero_inv_leido }}</div>
-                    @if (e.descripcion) {
-                      <div class="text-xs text-guinda-500 truncate">{{ e.descripcion }}</div>
-                    }
-                    @if (e.marca || e.modelo) {
-                      <div class="text-xs text-guinda-400 truncate">
-                        {{ e.marca }}{{ e.marca && e.modelo ? ' · ' : '' }}{{ e.modelo }}
-                      </div>
-                    }
-                    @if (e.observaciones) {
-                      <div class="text-xs text-guinda-300 truncate italic">{{ e.observaciones }}</div>
-                    }
+            <!-- Tab Escaneos -->
+            @if (tabActivo() === 'escaneos') {
+              <div class="flex-1 overflow-y-auto space-y-2 max-h-[calc(100vh-280px)]">
+                @if (historial().length === 0) {
+                  <div class="text-center py-10 text-guinda-300 text-sm">Sin escaneos aún</div>
+                }
+                @for (e of historial(); track e.id) {
+                  <div class="flex items-center gap-3 p-3 rounded-lg bg-crema border border-crema-border
+                              animate-fade-in hover:border-guinda-200 transition-colors">
+                    <div class="w-2 h-2 rounded-full shrink-0" [class]="dotResultado(e.resultado)"></div>
+                    <div class="flex-1 min-w-0">
+                      <div class="font-mono text-xs text-guinda-700 truncate font-semibold">{{ e.numero_inv_leido }}</div>
+                      @if (e.descripcion) {
+                        <div class="text-xs text-guinda-500 truncate">{{ e.descripcion }}</div>
+                      }
+                      @if (e.marca || e.modelo) {
+                        <div class="text-xs text-guinda-400 truncate">
+                          {{ e.marca }}{{ e.marca && e.modelo ? ' · ' : '' }}{{ e.modelo }}
+                        </div>
+                      }
+                      @if (e.observaciones) {
+                        <div class="text-xs text-guinda-300 truncate italic">{{ e.observaciones }}</div>
+                      }
+                    </div>
+                    <div class="text-xs text-guinda-300 font-mono shrink-0">
+                      {{ e.escaneado_at | date:'HH:mm:ss' }}
+                    </div>
                   </div>
-                  <div class="text-xs text-guinda-300 font-mono shrink-0">
-                    {{ e.escaneado_at | date:'HH:mm:ss' }}
+                }
+              </div>
+            }
+
+            <!-- Tab Faltantes -->
+            @if (tabActivo() === 'faltantes') {
+              <div class="flex-1 overflow-y-auto space-y-2 max-h-[calc(100vh-280px)]">
+                @if (cargandoFaltantes()) {
+                  <div class="flex items-center justify-center py-10">
+                    <svg class="w-5 h-5 animate-spin text-guinda-400" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
                   </div>
-                </div>
-              }
-            </div>
+                } @else if (faltantes().length === 0) {
+                  <div class="text-center py-10">
+                    <div class="w-12 h-12 rounded-full bg-success-bg border border-success-border
+                                flex items-center justify-center mx-auto mb-3">
+                      <svg class="w-6 h-6 text-success-DEFAULT" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4.5 12.75l6 6 9-13.5"/>
+                      </svg>
+                    </div>
+                    <p class="text-success-DEFAULT font-semibold text-sm">¡Sin faltantes!</p>
+                    <p class="text-guinda-400 text-xs mt-1">Todos los bienes verificados</p>
+                  </div>
+                } @else {
+                  <div class="flex items-center justify-between mb-2 px-1">
+                    <span class="text-xs text-guinda-400">Actualizado en tiempo real</span>
+                    <span class="w-2 h-2 rounded-full bg-danger-DEFAULT animate-pulse"></span>
+                  </div>
+                  @for (f of faltantes(); track f.numero_inventario) {
+                    <div class="p-3 rounded-lg bg-danger-bg border border-danger-border/60 animate-fade-in">
+                      <div class="font-mono text-xs text-danger-DEFAULT font-semibold">{{ f.numero_inventario }}</div>
+                      <div class="text-xs text-guinda-700 font-medium truncate mt-0.5">{{ f.descripcion }}</div>
+                      @if (f.marca || f.modelo) {
+                        <div class="text-xs text-guinda-500 truncate">
+                          {{ f.marca }}{{ f.marca && f.modelo ? ' · ' : '' }}{{ f.modelo }}
+                        </div>
+                      }
+                      @if (f.ubicacion_esperada) {
+                        <div class="text-xs text-guinda-400 font-mono mt-0.5">{{ f.ubicacion_esperada }}</div>
+                      }
+                      @if (f.resguardo) {
+                        <div class="text-xs text-guinda-400">{{ f.resguardo }}</div>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            }
+
           </div>
         </div>
       </div>
@@ -420,6 +514,7 @@ export class EscaneoComponent implements OnInit, OnDestroy {
   sesionId = '';
   sesion               = signal<ResumenSesion | null>(null);
   historial            = signal<any[]>([]);
+  faltantes            = signal<Faltante[]>([]);
   ultimoResultado      = signal<EscaneoResponse | null>(null);
   escaneando           = signal(false);
   flashClass           = signal('');
@@ -427,6 +522,8 @@ export class EscaneoComponent implements OnInit, OnDestroy {
   cerrando             = signal(false);
   yaEscaneado          = signal('');
   cambiandoEstado      = signal(false);
+  tabActivo            = signal<'escaneos' | 'faltantes'>('escaneos');
+  cargandoFaltantes    = signal(false);
 
   codigoLeido        = '';
   ubicacionEscaneada = '';
@@ -447,17 +544,42 @@ export class EscaneoComponent implements OnInit, OnDestroy {
     this.sesionId = this.route.snapshot.paramMap.get('id')!;
     this.cargarSesion();
     this.cargarHistorial();
-    this.refreshInterval = setInterval(() => this.cargarSesion(), 10_000);
+    this.cargarFaltantes();
+    this.refreshInterval = setInterval(() => {
+      this.cargarSesion();
+      this.cargarFaltantes();
+    }, 10_000);
   }
 
   ngOnDestroy() { clearInterval(this.refreshInterval); }
 
   cargarSesion() {
-    this.api.obtenerSesion(this.sesionId).subscribe(s => { this.sesion.set(s); this.cdr.detectChanges(); });
+    this.api.obtenerSesion(this.sesionId).subscribe(s => {
+      this.sesion.set(s);
+      this.cdr.detectChanges();
+    });
   }
 
   cargarHistorial() {
-    this.api.listarEscaneos(this.sesionId).subscribe(data => { this.historial.set(data); this.cdr.detectChanges(); });
+    this.api.listarEscaneos(this.sesionId).subscribe(data => {
+      this.historial.set(data);
+      this.cdr.detectChanges();
+    });
+  }
+
+  cargarFaltantes() {
+    this.cargandoFaltantes.set(true);
+    this.api.faltantes(this.sesionId).subscribe({
+      next: data => {
+        this.faltantes.set(data);
+        this.cargandoFaltantes.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.cargandoFaltantes.set(false);
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   onCodigoSeleccionado(codigo: string) {
@@ -517,6 +639,7 @@ export class EscaneoComponent implements OnInit, OnDestroy {
           this.aplicarFlash(res.data.resultado);
           this.historial.update(h => [res.data!, ...h].slice(0, 100));
           this.cargarSesion();
+          this.cargarFaltantes();
         }
         this.codigoLeido = '';
         this.observaciones = '';
@@ -546,7 +669,7 @@ export class EscaneoComponent implements OnInit, OnDestroy {
               this.api.listarEscaneos(this.sesionId).subscribe(escaneos => {
                 const hash = (res.data as any)?.hash_cierre ?? 'N/A';
                 this.pdf.generarActa(sesion, faltantes, escaneos as any, hash);
-                this.router.navigate(['/sesion', this.sesionId]);
+                this.router.navigate(['/inventario/sesion', this.sesionId]);
               });
             });
           });
@@ -554,6 +677,10 @@ export class EscaneoComponent implements OnInit, OnDestroy {
       },
       error: () => this.cerrando.set(false),
     });
+  }
+
+  abrirSupervisor() {
+    window.open(`/inventario/supervisor/${this.sesionId}`, '_blank');
   }
 
   puedeGestionar() { return this.auth.hasRole('supervisor', 'admin'); }

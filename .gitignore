@@ -46,6 +46,8 @@ backend/*.exe
 
 # Environment 
 backend/.env
+backend/.env
+backend/.env.docker
 
 # Docker volumes
 pg_data/

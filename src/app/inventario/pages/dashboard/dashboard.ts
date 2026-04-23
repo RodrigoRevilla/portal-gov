@@ -288,9 +288,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   irSesion(s: ResumenSesion) {
-    this.router.navigate([s.estado === 'abierta' ? '/inventario/escaneo' : '/inventario/sesion', s.sesion_id]);
+    if (s.estado === 'abierta' || s.estado === 'pausada') {
+      this.router.navigate(['/inventario/escaneo', s.sesion_id]);
+    } else {
+      this.router.navigate(['/inventario/sesion', s.sesion_id]);
+    }
   }
-
   esAdminOAuditor() { return this.auth.hasRole('admin', 'auditor'); }
   puedeCrearSesion() { return this.auth.hasRole('supervisor', 'admin'); }
   logout() { this.auth.logout(); }

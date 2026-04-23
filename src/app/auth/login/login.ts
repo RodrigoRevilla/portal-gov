@@ -20,6 +20,7 @@ export class LoginComponent {
   password = '';
   errorMsg = '';
   cargando = false;
+  verPassword = false;
 
   login() {
     if (!this.email || !this.password) {
